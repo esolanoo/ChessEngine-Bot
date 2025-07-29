@@ -104,20 +104,20 @@ class Piece(Cell):
         self.val = str2val_pieces[c]    # Numeric code (1–14)
         self.first_move = True          # Needed for pawn double push / castling
 ```
-| Pieza 	| Color 	| b<sub>2</sub> 	| Letra     | b<sub>10</sub> |
-|-------	|-------	|-------	|-------	|-------	|
-| Negro    	| Rey   	| 0x0001   	| r      	| 1     	|
-| Negro    	| Reina   	| 0x0010   	| q      	| 2      	|
-| Negro    	| Torre   	| 0x0011   	| t      	| 3      	|
-| Negro    	| Alfil   	| 0x0100   	| a      	| 4      	|
-| Negro  	| Caballo  	| 0x0101   	| c      	| 5      	|
-| Negro    	| Peón   	| 0x0110   	| p      	| 6      	|
-| Blanco   	| Rey   	| 0x1001   	| R      	| 9      	|
-| Blanco   	| Reina   	| 0x1010   	| Q      	| 10      	|
-| Blanco   	| Torre   	| 0x1011   	| T      	| 11     	|
-| Blanco   	| Alfil   	| 0x1100   	| A      	| 12     	|
-| Blanco  	| Caballo  	| 0x1101   	| C      	| 13     	|
-| Blanco   	| Peón   	| 0x1110   	| P      	| 14     	|
+| Pieza 	| Color 	    | b<sub>2</sub> 	| Letra     | b<sub>10</sub> |
+|-------	|-------	    |-------	        |-------	  |-------	|
+| Black    	| King     	| 0x0001   	      | r      	  | 1     	|
+| Black    	| Queen   	| 0x0010   	      | q      	  | 2      	|
+| Black    	| Brook   	| 0x0011   	      | t      	  | 3      	|
+| Black    	| Bishop   	| 0x0100   	      | a       	| 4      	|
+| Black  	  | Knight  	| 0x0101   	      | c      	  | 5      	|
+| Black    	| Pawn    	| 0x0110   	      | p      	  | 6      	|
+| White   	| King   	  | 0x1001   	      | R      	  | 9      	|
+| White   	| Queen   	| 0x1010        	| Q      	  | 10      |
+| White   	| Brook   	| 0x1011        	| T      	  | 11     	|
+| White   	| Bishop   	| 0x1100   	      | A      	  | 12     	|
+| White  	  | Horse   	| 0x1101   	      | C      	  | 13     	|
+| White   	| Pawn     	| 0x1110   	      | P      	  | 14     	|
 
 
 ### Class `Game`
@@ -190,8 +190,6 @@ Below is an end‑to‑end snippet exploring the API.
 |*2*|16| 15| 14| 13| 12| 11| 10|  9|
 |*1*|8 |  7|  6|  5|  4|  3|  2|  1|
 
-
-'¤' if (self.column + self.row%2)%2==0 else '■'
 
 ```python
 >>> from chess_core import Game

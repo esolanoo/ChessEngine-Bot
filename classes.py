@@ -1,3 +1,6 @@
+from ast import Return
+from hmac import new
+from shutil import move
 import numpy as np
 
 initFEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
@@ -16,6 +19,7 @@ class Cell:
         self.val=0
         self.color = ''
         self.c = ''
+        self.in_check = False
     
     def __str__(self) -> str:
         return '.' if self.empty else self.c
@@ -26,6 +30,7 @@ class Cell:
         setattr(self, 'empty', True)
         setattr(self, 'val', 0)
         setattr(self, 'color', '')
+        setattr(self, 'first_move', False)
     
     def set_piece(self, c):
         setattr(self, 'c', c)
@@ -39,6 +44,7 @@ class Cell:
         setattr(self, 'color', new_piece.color)
         setattr(self, 'val', str2val_pieces[new_piece.c])
         setattr(self, 'first_move', False)
+        setattr(self, 'in_check', new_piece.in_check)
         
     
 # Game  
@@ -72,6 +78,16 @@ class Game:
     def find_piece(self, pos):
         row, col = self.id2cord(pos)
         return self.board[row][col]
+    
+    def find_piece_by_val(self, val):
+        for row in self.board:
+            for cell in row:
+                if cell.val==val:
+                    return cell
+                
+    def find_king(self, color):
+        val = 9 if color=='w' else 1
+        return self.find_piece_by_val(val)
     
     def fromFEN(self, FEN):
         aux = 64
@@ -125,16 +141,16 @@ class Game:
         traveler = self.board[row][col]
         pos_moves = list()
         if not traveler.empty: 
-            aux = 1 if traveler.color == 'b' else -1
             if traveler.c.lower()=='p':
-                if self.board[row+1*aux][col].empty:
-                    pos_moves.append((row+1*aux, col))
-                for i in [-1,+1]:
-                    if self.valid_pos(row+1*aux, col+i) and not(self.board[row+1*aux][col+i].empty) and self.enemy(row, col, row+1*aux, col+i):
-                        pos_moves.append((row+1*aux, col+i, 'x'))
-                if self.board[row+2*aux][col].empty and self.board[row][col].first_move:
-                    pos_moves.append((row+2*aux, col))
-                    
+                i = 1 if traveler.color == 'b' else -1
+                if self.valid_pos(row+i, col) and self.board[row+i][col].empty:
+                    pos_moves.append((row+i, col))
+                if self.valid_pos(row+(2*i), col) and self.board[row+(2*i)][col].empty and traveler.first_move:
+                    pos_moves.append((row+(2*i), col))
+                for i in [-1,1]:
+                    if self.valid_pos(row+i, col+i) and not(self.board[row+i][col+i].empty) and self.enemy(row, col, row+i, col+i):
+                        pos_moves.append((row+i, col+i, 'x'))
+
             if traveler.c.lower()=='n':
                 for i in [-2,-1,1,2]:
                     for j in [-2,-1,1,2]:
@@ -147,7 +163,7 @@ class Game:
                                 else:
                                     pass
                           
-            if traveler.c.lower()=='b':
+            if traveler.c.lower()=='b' or traveler.c.lower()=='q':
                 for i in [-1,1]:
                     for j in [-1,1]:
                         r, c = row+i, col+j
@@ -162,9 +178,60 @@ class Game:
                             r+=i
                             c+=j
                             
+            if traveler.c.lower()=='r' or traveler.c.lower()=='q':
+                for i in [-1,1]:
+                    r = row+i
+                    while self.valid_pos(r,col):
+                        if self.board[r][col].empty:
+                            pos_moves.append((r,col))
+                        elif self.enemy(row, col, r, col):
+                            pos_moves.append((r,col,'x'))
+                            break
+                        else:
+                            break
+                        r+=i
+                for j in [-1,1]:
+                    c = col+j
+                    while self.valid_pos(row,c):
+                        if self.board[row][c].empty:
+                            pos_moves.append((row,c))
+                        elif self.enemy(row, col, row, c):
+                            pos_moves.append((row,c,'x'))
+                            break
+                        else:
+                            break
+                        c+=j 
+            if traveler.c.lower()=='k':
+                # Castling
+                if traveler.first_move and self.castling!='-' and traveler.in_check==False:
+                    if self.turn=='w':
+                        if 'K' in self.castling:
+                            if self.board[7][5].empty and self.board[7][6].empty and self.board[7][7].c=='R' and self.board[7][7].first_move:
+                                self.pos_moves.append('O-O')
+                        if 'Q' in self.castling:
+                            if self.board[7][3].empty and self.board[7][2].empty and self.board[7][1].empty and self.board[7][0].c=='R' and self.board[7][0].first_move:
+                                self.pos_moves.append('O-O-O')
+                    else:
+                        if 'k' in self.castling:
+                            if self.board[0][5].empty and self.board[0][6].empty and self.board[0][7].c=='r' and self.board[0][7].first_move:
+                                self.pos_moves.append('o-o')
+                        if 'q' in self.castling:
+                            if self.board[0][3].empty and self.board[0][2].empty and self.board[0][1].empty and self.board[0][0].c=='r' and self.board[0][0].first_move:
+                                self.pos_moves.append('o-o-o')
+                    
+
+                for i in [-1,0,1]:
+                    for j in [-1,0,1]:
+                        if not(i==0 and j==0) and self.valid_pos(row+i, col+j):
+                            if self.board[row+i][col+j].empty:
+                                pos_moves.append((row+i, col+j))
+                            elif self.enemy(row, col, row+i, col+j):
+                                pos_moves.append((row+i, col+j, 'x'))
+                        
+                        
         if pos_moves:                
             for i in set(pos_moves):
-                self.pos_moves.append(self.board[row][col].c + pos + (i[2] if len(i)>2 else '') + self.cord2id(i[0], i[1]))
+                self.pos_moves.append(''.join([self.board[row][col].c, pos, (i[2] if len(i)>2 else ''), self.cord2id(i[0], i[1])]))
         return 0
     
     def possible_moves(self, color):
@@ -182,6 +249,7 @@ class Game:
         return np.array(r)
     
     def move(self, move_id):
+        # Move is formatted as 'NB1A3' OR 'pa5xb4' or 'O-O' or 'o-o-o', etc
         move = self.pos_moves[move_id]
         self.pos_moves = []
         self.hist.append(move)
@@ -189,16 +257,69 @@ class Game:
         if 'x'in move:
             capture = True
             move.replace('x', '')
-        
+            
         origin = move[1:3]
         traveler = self.find_piece(origin)
-        
         destiny = move[-2:]
+             
+        #Handle castling
+        if move.lower()=='o-o':
+            rook_origin = 'h8' if traveler.color=='w' else 'h1'
+            rook_destiny = 'f8' if traveler.color=='w' else 'f1'
+            rook = self.find_piece(rook_origin)
+            rook_destination = self.find_piece(rook_destiny)
+            rook_destination.import_piece(rook)
+            rook.make_empty()
+            destiny = 'g8' if traveler.color=='w' else 'g1'              
+            if traveler.color=='w':
+                self.castling = self.castling.replace('K', '').replace('Q', '')
+            else:
+                self.castling = self.castling.replace('k', '').replace('q', '')           
+        elif move.lower()=='o-o-o':
+            rook_origin = 'a8' if traveler.color=='w' else 'a1'
+            rook_destiny = 'd8' if traveler.color=='w' else 'd1'
+            rook = self.find_piece(rook_origin)
+            rook_destination = self.find_piece(rook_destiny)
+            rook_destination.import_piece(rook)
+            rook.make_empty()
+            destiny = 'c8' if traveler.color=='w' else 'c1'              
+            if traveler.color=='w':
+                self.castling = self.castling.replace('K', '').replace('Q', '')
+            else:
+                self.castling = self.castling.replace('k', '').replace('q', '')
+        if traveler.c.lower()=='r' and traveler.first_move:
+            if traveler.column==0:
+                if traveler.color=='w':
+                    self.castling = self.castling.replace('Q', '')
+                else:
+                    self.castling = self.castling.replace('q', '')
+            else:     
+                if traveler.color=='w':
+                    self.castling = self.castling.replace('K', '')
+                else:
+                    self.castling = self.castling.replace('k', '')
+        if traveler.c.lower()=='k' and traveler.first_move:    
+            if traveler.color=='w':
+                self.castling = self.castling.replace('K', '').replace('Q', '')
+            else:
+                self.castling = self.castling.replace('k', '').replace('q', '')
+        
+        if not self.castling:
+            self.castling = '-'    
+                    
         destination = self.find_piece(destiny)
+        
+        
+        if traveler.c.lower()=='p' and (destination.row==0 or destination.row==7):
+            if traveler.color=='b':
+                traveler.set_piece('q')
+            else:
+                traveler.set_piece('Q')
+        
         destination.import_piece(traveler)
         traveler.make_empty()
         
         setattr(self, 'step', self.step + 1 if self.turn=='b' else self.step)
         setattr(self, 'turn', 'w' if self.turn=='b' else 'b')
         self.game = self.toFEN()
-        
+        return

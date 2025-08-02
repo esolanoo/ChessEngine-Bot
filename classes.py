@@ -323,3 +323,10 @@ class Game:
         setattr(self, 'turn', 'w' if self.turn=='b' else 'b')
         self.game = self.toFEN()
         return
+    
+    def repetition_draw(self):
+        # True if the last 3 moves have been the same
+        if len(self.hist)>6:
+            if self.hist[-1]==self.hist[-3] and self.hist[-2]==self.hist[-4] and self.hist[-5]==self.hist[-6]:
+                return True
+        return False
